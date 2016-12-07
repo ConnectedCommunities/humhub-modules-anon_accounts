@@ -18,15 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-Yii::app()->moduleManager->register(array(
-    'id' => 'anon_accounts',
-    'class' => 'application.modules.anon_accounts.AnonAccountsModule',
-    'import' => array(
-        'application.modules.anon_accounts.*',
-        'application.modules.anon_accounts.forms.*',
-    ),
-    'events' => array(
-    	array('class' => 'AdminMenuWidget', 'event' => 'onInit', 'callback' => array('AnonAccountsEvents', 'onAdminMenuInit')),
-    ),
-));
-?>
+namespace humhub\modules\anon_accounts;
+
+class Module extends \humhub\components\Module {
+    
+}

@@ -2,12 +2,10 @@
     "id": "anon_accounts",
     "name": "Anon Accounts",
     "description": "Anonymise accounts by suggesting a random name and profile picture on signup",
-    "keywords": [
-        "user", "auth"
-    ],
+    "keywords": ["user", "auth"],
     "version": "1.0",
     "humhub": {
-        "minVersion": "0.8"
+        "minVersion": "1.0"
     },
     "screenshots": ["assets/screen1.jpg","assets/screen2.jpg"]
 }

@@ -18,8 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-class AnonAccountsEvents {
+namespace humhub\modules\anon_accounts;
 
+use Yii;
+use yii\helpers\Url;
+
+
+class Events extends \yii\base\Object
+{
     /**
      * Defines what to do if admin menu is initialized.
      *
@@ -29,10 +35,10 @@ class AnonAccountsEvents {
     {
         $event->sender->addItem(array(
             'label' => Yii::t('AnonAccountsModule.base', 'Anon Accounts'),
-            'url' => Yii::app()->createUrl('//anon_accounts/admin'),
+            'url' => Url::to(['/anon_accounts/admin/index']),
             'group' => 'manage',
             'icon' => '<i class="fa fa-paw"></i>',
-            'isActive' => (Yii::app()->controller->module && Yii::app()->controller->module->id == 'anon_accounts' && Yii::app()->controller->id == 'admin'),
+            'isActive' => (Yii::$app->controller->module && Yii::$app->controller->module->id == 'anon_accounts' && Yii::$app->controller->id == 'admin'),
             'sortOrder' => 580,
         ));
     }

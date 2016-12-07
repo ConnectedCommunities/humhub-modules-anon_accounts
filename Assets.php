@@ -2,7 +2,7 @@
 
 /**
  * Connected Communities Initiative
- * Copyright (C) 2016  Queensland University of Technology
+ * Copyright (C) 2016 Queensland University of Technology
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
@@ -18,34 +18,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * @package anon_accounts.forms
- */
-namespace humhub\modules\anon_accounts\forms;
+namespace humhub\modules\anon_accounts;
 
-class IdenticonForm extends \yii\base\Model
+use yii\web\AssetBundle;
+
+class Assets extends AssetBundle
 {
+    public $js = [
+        '//cdn.jsdelivr.net/jdenticon/1.3.2/jdenticon.min.js',
+        '//cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.3.0/js/md5.min.js'
+    ];
 
-    public $image;
-
-    /**
-     * Declares the validation rules.
-     */
-    public function rules() {
-        return array(
-            array('image', 'safe'),
-        );
+    public function init()
+    {
+        // $this->sourcePath = dirname(__FILE__) . '/assets';
+        parent::init();
     }
-
-    /**
-     * Declares customized attribute labels.
-     * If not declared here, an attribute would have a label that is
-     * the same as its name with the first letter in upper case.
-     */
-    public function attributeLabels() {
-        return array(
-            'image' => 'Default Profile Image',
-        );
-    }
-
 }

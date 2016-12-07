@@ -16,16 +16,16 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-?>
-<?php
+
 /**
  * Create account page, after the user clicked the email validation link.
  */
-$this->pageTitle = Yii::t('UserModule.views_auth_createAccount', '<strong>Account</strong> registration');
-?>
 
+
+humhub\modules\anon_accounts\Assets::register($this);
+?>
 <div class="container" style="text-align: center;">
-    <h1 id="app-title" class="animated fadeIn"><?php echo CHtml::encode(Yii::app()->name); ?></h1>
+    <h1 id="app-title" class="animated fadeIn"><?php echo Yii::$app->name; ?></h1>
     <br/>
     <div class="row">
         <div id="create-account-form" class="panel panel-default animated bounceIn" style="max-width: 500px; margin: 0 auto 20px; text-align: left;">
@@ -46,22 +46,21 @@ $this->pageTitle = Yii::t('UserModule.views_auth_createAccount', '<strong>Accoun
 
                             <div class="media-body">
                                 <h4 class="media-heading">Email</h4>
-                                <h5><?php echo $form['User']->model->email; ?></h5>
+                                <h5><?php echo $hForm->models['User']->email; ?></h5>
                             </div>
                             <br />
                         </div>
-                    </div>                    
+                    </div>
                 </fieldset>
-                
-                <?php echo $form; ?>
+
+                <?php $form = \yii\widgets\ActiveForm::begin(['enableClientValidation' => false]); ?>
+                <?php echo $hForm->render($form); ?>
+                <?php \yii\widgets\ActiveForm::end(); ?>
+
             </div>
         </div>
     </div>
 </div>
-
-<script type="text/javascript" src="https://cdn.jsdelivr.net/jdenticon/1.3.2/jdenticon.min.js"></script>
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.3.0/js/md5.min.js"></script>
-
 <script type="text/javascript">
     $(function() {
         // set cursor to login field
@@ -70,8 +69,8 @@ $this->pageTitle = Yii::t('UserModule.views_auth_createAccount', '<strong>Accoun
         // Update the jdenticon canvas and dataURL input value
         function generateJdenticon(value) {
             jdenticon.update("#identicon", md5(value));
-            $("#image").val($("#identicon").get(0).toDataURL());
-        }       
+            $("#identiconform-image").val($("#identicon").get(0).toDataURL());
+        }
 
         // Listen for changes
         $( "#email" ).keypress(function() {
@@ -83,17 +82,17 @@ $this->pageTitle = Yii::t('UserModule.views_auth_createAccount', '<strong>Accoun
         });
 
         // Init
-        generateJdenticon("<?php echo $form['User']->model->email; ?>");
+        generateJdenticon("<?php echo $hForm->models['User']->email; ?>");
 
     })
 
     // Shake panel after wrong validation
-<?php foreach ($form->models as $model) : ?>
+    <?php foreach ($hForm->models as $model) : ?>
     <?php if ($model->hasErrors()) : ?>
-            $('#create-account-form').removeClass('bounceIn');
-            $('#create-account-form').addClass('shake');
-            $('#app-title').removeClass('fadeIn');
+    $('#create-account-form').removeClass('bounceIn');
+    $('#create-account-form').addClass('shake');
+    $('#app-title').removeClass('fadeIn');
     <?php endif; ?>
-<?php endforeach; ?>
+    <?php endforeach; ?>
 
 </script>
