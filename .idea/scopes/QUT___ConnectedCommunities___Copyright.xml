@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="QUT - ConnectedCommunities - Copyright" pattern="file[humhub-modules-anon_accounts]:*/" />
+</component>
