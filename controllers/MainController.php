@@ -22,13 +22,9 @@ namespace humhub\modules\anon_accounts\controllers;
 
 use Yii;
 use yii\web\HttpException;
-use yii\helpers\Url;
 use \humhub\models\Setting;
-use humhub\components\Controller;
 use humhub\modules\user\models\Invite;
-use humhub\compat\HForm;
 use humhub\modules\user\models\User;
-use humhub\modules\user\models\Password;
 use humhub\modules\anon_accounts\forms\IdenticonForm;
 use humhub\libs\ProfileImage;
 
@@ -37,12 +33,12 @@ class MainController extends \humhub\modules\user\controllers\AuthController {
 
     public function actionIndex(){
 
+        $authClient = null;
+        $registration = new \humhub\modules\anon_accounts\forms\Registration();
 
-        $needApproval = Setting::Get('needApproval', 'authentication_internal');
-
-        if (!Yii::$app->user->isGuest)
-            throw new HttpException(401, 'Your are already logged in! - Logout first!');
-
+        // Apply Identicon profile picture
+        $identiconForm = new IdenticonForm();
+        $registration->models['IdenticonForm'] = $identiconForm;
 
         $userInvite = Invite::findOne(['token' => Yii::$app->request->get('token')]);
         if (!$userInvite)
@@ -51,17 +47,32 @@ class MainController extends \humhub\modules\user\controllers\AuthController {
         if ($userInvite->language)
             Yii::$app->language = $userInvite->language;
 
-        $userModel = new User();
-        $userModel->scenario = 'registration';
-        $userModel->email = $userInvite->email;
 
-        $userPasswordModel = new Password();
-        $userPasswordModel->scenario = 'registration';
+        if ($registration->submitted('save') && $registration->validate() && $registration->register($authClient)) {
+            Yii::$app->session->remove('authClient');
 
-        $profileModel = $userModel->profile;
-        $profileModel->scenario = 'registration';
+            // Prepend Data URI scheme (stripped out for safety)
+            $identiconForm->image = str_replace("[removed]", "data:image/png;base64,", $identiconForm->image);
+
+            // Upload new Profile Picture for user
+            $this->uploadProfilePicture($registration->models['User']->guid, $identiconForm->image);
+
+            // Autologin when user is enabled (no approval required)
+            if ($registration->getUser()->status === User::STATUS_ENABLED) {
+                Yii::$app->user->switchIdentity($registration->models['User']);
+                return $this->redirect(['/dashboard/dashboard']);
+            }
+
+            return $this->render('success', [
+                'form' => $registration,
+                'needApproval' => ($registration->getUser()->status === User::STATUS_NEED_APPROVAL)
+            ]);
+        }
 
         ///////////////////////////////////////////////////////
+        // Set the users email in the Registration model
+        $registration->getUser()->email = $userInvite->email;
+
         // Generate a random first name
         $firstNameOptions = explode("\n", Setting::GetText('anonAccountsFirstNameOptions'));
         $randomFirstName = trim(ucfirst($firstNameOptions[array_rand($firstNameOptions)]));
@@ -71,143 +82,15 @@ class MainController extends \humhub\modules\user\controllers\AuthController {
         $randomLastName = trim(ucfirst($lastNameOptions[array_rand($lastNameOptions)]));
 
         // Pre-set the random first and last name
-        $profileModel->lastname = $randomLastName;
-        $profileModel->firstname = $randomFirstName;
+        $registration->getProfile()->lastname = $randomLastName;
+        $registration->getProfile()->firstname = $randomFirstName;
 
         // Make the username from the first and lastnames (only first 25 chars)
-        $userModel->username = substr(str_replace(" ", "_", strtolower($profileModel->firstname . "_" . $profileModel->lastname)), 0, 25);
+        $registration->getUser()->username = substr(str_replace(" ", "_", strtolower($registration->getProfile()->firstname . "_" . $registration->getProfile()->lastname)), 0, 25);
         ///////////////////////////////////////////////////////
 
-        // Build Form Definition
-        $definition = array();
-        $definition['elements'] = array();
+        return $this->render('createAccount', ['hForm' => $registration]);
 
-
-        $groupModels = \humhub\modules\user\models\Group::find()->orderBy('name ASC')->all();
-        $defaultUserGroup = \humhub\models\Setting::Get('defaultUserGroup', 'authentication_internal');
-        $groupFieldType = "dropdownlist";
-        if ($defaultUserGroup != "") {
-            $groupFieldType = "hidden";
-        } else if (count($groupModels) == 1) {
-            $groupFieldType = "hidden";
-            $defaultUserGroup = $groupModels[0]->id;
-        }
-        if ($groupFieldType == 'hidden') {
-            $userModel->group_id = $defaultUserGroup;
-        }
-
-        // Add Identicon Form
-        $identiconForm = new IdenticonForm();
-        $definition['elements']['IdenticonForm'] = array(
-            'type' => 'form',
-            'elements' => array(
-                'image' => array(
-                    'type' => 'hidden',
-                    'class' => 'form-control',
-                    'id' => 'image'
-                ),
-            ),
-        );
-
-        // Add Profile Form
-        $definition['elements']['Profile'] = array_merge(array('type' => 'form'), $profileModel->getFormDefinition());
-
-        // Add User Form
-        $definition['elements']['User'] = array(
-            'type' => 'form',
-            'title' => Yii::t('UserModule.controllers_AuthController', 'Account'),
-            'elements' => array(
-                'username' => array(
-                    'type' => 'hidden',
-                    'class' => 'form-control',
-                    'maxlength' => 25,
-                ),
-                'group_id' => array(
-                    'type' => $groupFieldType,
-                    'class' => 'form-control',
-                    'items' => \yii\helpers\ArrayHelper::map($groupModels, 'id', 'name'),
-                    'value' => $defaultUserGroup,
-                ),
-            ),
-        );
-
-        // Add User Password Form
-        $definition['elements']['UserPassword'] = array(
-            'type' => 'form',
-            #'title' => 'Password',
-            'elements' => array(
-                'newPassword' => array(
-                    'type' => 'password',
-                    'class' => 'form-control',
-                    'maxlength' => 255,
-                ),
-                'newPasswordConfirm' => array(
-                    'type' => 'password',
-                    'class' => 'form-control',
-                    'maxlength' => 255,
-                ),
-            ),
-        );
-
-        // Get Form Definition
-        $definition['buttons'] = array(
-            'save' => array(
-                'type' => 'submit',
-                'class' => 'btn btn-primary',
-                'label' => Yii::t('UserModule.controllers_AuthController', 'Create account'),
-            ),
-        );
-
-        $form = new HForm($definition);
-        $form->models['User'] = $userModel;
-        $form->models['UserPassword'] = $userPasswordModel;
-        $form->models['Profile'] = $profileModel;
-        $form->models['IdenticonForm'] = $identiconForm;
-
-        if ($form->submitted('save') && $form->validate() && $identiconForm->validate()) {
-
-            $this->forcePostRequest();
-
-            // Registe User
-            $form->models['User']->email = $userInvite->email;
-            $form->models['User']->language = Yii::$app->language;
-            if ($form->models['User']->save()) {
-
-                // Save User Profile
-                $form->models['Profile']->user_id = $form->models['User']->id;
-                $form->models['Profile']->save();
-
-                // Save User Password
-                $form->models['UserPassword']->user_id = $form->models['User']->id;
-                $form->models['UserPassword']->setPassword($form->models['UserPassword']->newPassword);
-                $form->models['UserPassword']->save();
-
-                // Autologin user
-                if (!$needApproval) {
-
-                    $user = $form->models['User'];
-                    Yii::$app->user->login($user);
-                    
-                    // Prepend Data URI scheme (stripped out for safety)
-                    $identiconForm->image = str_replace("[removed]", "data:image/png;base64,", $identiconForm->image);
-                    // Upload new Profile Picture for user
-                    $this->uploadProfilePicture(Yii::$app->user->guid, $identiconForm->image);
-
-                    // Redirect to dashboard
-                    return $this->redirect(Url::to(['/dashboard/dashboard']));
-                }
-
-                return $this->render('createAccount_success', array(
-                    'form' => $form,
-                    'needApproval' => $needApproval,
-                ));
-            }
-        }
-
-        return $this->render('createAccount', array(
-                'hForm' => $form,
-                'needAproval' => $needApproval)
-        );
     }
 
 
