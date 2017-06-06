@@ -48,6 +48,27 @@ class MainController extends \humhub\modules\user\controllers\AuthController {
             Yii::$app->language = $userInvite->language;
 
 
+        ///////////////////////////////////////////////////////
+        // Set the users email in the Registration model
+        $registration->getUser()->email = $userInvite->email;
+
+        // Generate a random first name
+        $firstNameOptions = explode("\n", Setting::GetText('anonAccountsFirstNameOptions'));
+        $randomFirstName = trim(ucfirst($firstNameOptions[array_rand($firstNameOptions)]));
+
+        // Generate a random last name
+        $lastNameOptions = explode("\n", Setting::GetText('anonAccountsLastNameOptions'));
+        $randomLastName = trim(ucfirst($lastNameOptions[array_rand($lastNameOptions)]));
+
+        // Pre-set the random first and last name
+        $registration->getProfile()->lastname = $randomLastName;
+        $registration->getProfile()->firstname = $randomFirstName;
+
+        // Make the username from the first and lastnames (only first 25 chars)
+        $registration->getUser()->username = substr(str_replace(" ", "_", strtolower($registration->getProfile()->firstname . "_" . $registration->getProfile()->lastname)), 0, 25);
+        ///////////////////////////////////////////////////////
+        
+
         if ($registration->submitted('save') && $registration->validate() && $registration->register($authClient)) {
             Yii::$app->session->remove('authClient');
 
@@ -68,26 +89,6 @@ class MainController extends \humhub\modules\user\controllers\AuthController {
                 'needApproval' => ($registration->getUser()->status === User::STATUS_NEED_APPROVAL)
             ]);
         }
-
-        ///////////////////////////////////////////////////////
-        // Set the users email in the Registration model
-        $registration->getUser()->email = $userInvite->email;
-
-        // Generate a random first name
-        $firstNameOptions = explode("\n", Setting::GetText('anonAccountsFirstNameOptions'));
-        $randomFirstName = trim(ucfirst($firstNameOptions[array_rand($firstNameOptions)]));
-
-        // Generate a random last name
-        $lastNameOptions = explode("\n", Setting::GetText('anonAccountsLastNameOptions'));
-        $randomLastName = trim(ucfirst($lastNameOptions[array_rand($lastNameOptions)]));
-
-        // Pre-set the random first and last name
-        $registration->getProfile()->lastname = $randomLastName;
-        $registration->getProfile()->firstname = $randomFirstName;
-
-        // Make the username from the first and lastnames (only first 25 chars)
-        $registration->getUser()->username = substr(str_replace(" ", "_", strtolower($registration->getProfile()->firstname . "_" . $registration->getProfile()->lastname)), 0, 25);
-        ///////////////////////////////////////////////////////
 
         return $this->render('createAccount', ['hForm' => $registration]);
 
